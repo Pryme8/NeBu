@@ -4,7 +4,7 @@
     "description": "Nebuchadnezzar Builder Tests (NeBu)",
     "main": "index.js",
     "scripts": {
-        "build": "webpack",
+        "build": "webpack --mode production",
         "start": "webpack serve --open --content-base src --hot --inline"
     },
     "keywords": [],
