@@ -88,6 +88,10 @@ export class SnappingModel extends Entity{
         return this._offset
     }
 
+    public setPreviewImage(url){
+        this.params.previewImageUrl = url
+    }
+
     constructor(_params, _manager){
         super(_params, _manager)  
         this._onInitialize()    
@@ -101,7 +105,6 @@ export class SnappingModel extends Entity{
         if(this.getProperty('useGlbTemplate')){
             const containerTarget = this.getProperty('snapPointsParentName') ?? 'SnapPoints'
             this._parseGlbTemplate(containerTarget)
-
         }else{
             this._snapPoints = this.getProperty('snapPoints')
         }

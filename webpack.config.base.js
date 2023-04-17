@@ -10,8 +10,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 // output folder location
 const distFolder = "./dist";
 
-module.exports = {
-  mode: 'development',
+module.exports = { 
   entry: './src/index.ts',
   plugins: [
     new CleanWebpackPlugin(),
@@ -24,9 +23,7 @@ module.exports = {
       ]
     })
   ],
-  devtool: 'inline-source-map',
   devServer: {
-    contentBase: distFolder,
     port: 4200
   },
   module: {
@@ -42,6 +39,12 @@ module.exports = {
           'style-loader',
           'css-loader'
         ]
+      },
+      {
+        test: /\.m?js/,
+        resolve: {
+            fullySpecified: false
+        }
       }
     ]
   },
@@ -61,7 +64,7 @@ module.exports = {
     fallback: {
       'fs': false,
       'path': false,
-    }
+    },
   },
   output: {
     filename: '[name].bundle.js',

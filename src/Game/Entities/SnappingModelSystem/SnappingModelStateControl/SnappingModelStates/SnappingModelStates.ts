@@ -1,6 +1,4 @@
-
 import { State } from "../../../../../StateController/State"
-
 export class SnappingModelStates extends State{
     get name(){
         return ''

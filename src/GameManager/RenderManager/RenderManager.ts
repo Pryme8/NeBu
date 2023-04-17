@@ -1,4 +1,4 @@
-import { Engine, FreeCamera, Scene, Vector3 } from "@babylonjs/core"
+import { Engine, FreeCamera, Scene, Vector3, DebugLayer, DebugLayerTab } from "@babylonjs/core"
 import { GameManager } from "../GameManager"
 import { ShadowManager } from "./ShadowManager/ShadowManager"
 
@@ -65,6 +65,7 @@ export class RenderManager{
 
         this._engine = engine  
         this._scene = scene
+        scene.debugLayer.show()
     }
 
     _renderLoop(){

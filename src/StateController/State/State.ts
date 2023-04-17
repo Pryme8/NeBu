@@ -9,4 +9,6 @@ export class State {
     enter(prevState){}
     exit(){}
     update(delta:number){}
+
+    static onAdd: ()=>void | null = null
 }

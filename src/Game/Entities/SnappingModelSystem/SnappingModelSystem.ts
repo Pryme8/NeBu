@@ -1,4 +1,4 @@
-import { AssetContainer, Color3, MeshBuilder, PickingInfo, PointerEventTypes, PointerInfo, StandardMaterial, TransformNode, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, AssetContainer, BoundingInfo, Color3, Color4, Constants, MeshBuilder, PickingInfo, PointerEventTypes, PointerInfo, RenderTargetTexture, Scene, StandardMaterial, Texture, Tools, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control, Rectangle, ScrollViewer, StackPanel } from "@babylonjs/gui";
 import { Entity, IEntityParams } from "../../../GameManager/Entity";
 import { LoadModelToContainer } from "../../Components";
@@ -22,10 +22,18 @@ export interface ISnappingModelParams{
     decoration : boolean
     offset? : Vector3
     canFlipX? : boolean
+    generateImage?: boolean
+    imageCaptureOptions?: IImageCaptureOptions
     previewImageUrl? : string
     rootTransform?: TransformNode 
 }
-
+interface IImageCaptureOptions{
+    autoPosition?:boolean
+    cameraInverseForward?:Vector3
+    position?: Vector3
+    focusTarget?: Vector3
+    resolution?: Vector2
+}
 interface ISnappingPoint{
     position: Vector3
     forward: Vector3
@@ -94,6 +102,7 @@ export class SnappingModelSystem extends Entity{
         this._bindings()
         this._buildUI()        
         this.stateControl.setState('loading')
+
     }  
     
     private _loadStarted: boolean = false
@@ -108,9 +117,9 @@ export class SnappingModelSystem extends Entity{
                 this.AddComponent(LoadModelToContainer, {url:model.url, 
                     onDone:(container:AssetContainer)=>{
                         const name = model.name
-                        container.addAllToScene()
-                        container.meshes[0].setEnabled(false)   
+                        container.addAllToScene()                        
                         model.rootTransform = container.meshes[0]
+                        model.rootTransform.setEnabled(false)
                         model.rootTransform.getChildMeshes(false).forEach(m=>{
                             m.renderingGroupId = 1
                             m.isPickable = false
@@ -119,14 +128,148 @@ export class SnappingModelSystem extends Entity{
                         this.modelMap[name] = model
                         waitingOn--
                         console.log(`loaded model : ${model.name}, waitingOn: ${waitingOn}`)
-                        if(waitingOn == 0){
-                            this.stateControl.setState('normal')
+                        if(waitingOn == 0){                            
+                            this._generateImages()                                                  
                         }
                     }
                 })
             })
         }
     }
+
+    _generateImages(){
+        const modelKeys = Object.keys(this.modelMap)        
+        const list = []
+        modelKeys.forEach((key)=>{
+            const model = this.modelMap[key]
+            if(model.generateImage){
+                const imageCaptureOptions = {
+                    ...(model?.imageCaptureOptions ?? {})
+                }
+                list.push({
+                    model, imageCaptureOptions
+                })
+            }
+        })
+        
+        if(list.length){
+            this._imageGenerationStep(list)
+        }else{
+            this.stateControl.setState('normal')
+        }
+    }
+
+    _imageGenerationStep(list){
+        if(list.length){
+            const step = list.splice(0,1)[0]
+            const params = {
+                scene: this.scene,
+                camera: this.scene.activeCamera,
+                targetRoot: step.model.rootTransform,
+                onBlobSuccess: (blob)=>{
+                    console.log(blob)
+                    this.modelMap[step.model.name].previewImageUrl = blob
+                    const tempTexture = new Texture(blob, this.scene)
+                    //this._imageGenerationStep(list)
+                },
+                ...step.imageCaptureOptions
+            }
+
+            SnappingModelSystem.GetModelScreenCaptureRttAsBlob(params)
+
+        }else{
+            this.stateControl.setState('normal')
+        }        
+    }
+
+    static getModelScreenCaptureRttAsBlobDefaultParams = {
+        resolution: new Vector2(512, 512),
+        autoPosition:true, 
+        cameraInverseForward: (new Vector3(0.5, 1, 0.5)).normalizeToNew(), 
+        focusTarget: new Vector3()
+    }
+
+     public static async GetModelScreenCaptureRttAsBlob(params){
+        params = {...SnappingModelSystem.getModelScreenCaptureRttAsBlobDefaultParams, ...params}
+        console.log(params)
+        const scene : Scene = params.scene
+        const camera = params.camera
+        const resolution = params.resolution
+        const targetRoot: TransformNode = params.targetRoot
+        const onBlobSuccess = params.onBlobSuccess
+        const engine = scene.getEngine()
+        const canvas = engine.getRenderingCanvas() 
+
+        const originals = {
+            cameraPosition : camera.position.clone(),
+            cameraTarget : camera.getTarget(),
+            clearColor: scene.clearColor.clone(),
+            size: new Vector2(canvas.width, canvas.height)
+        }
+
+        // const rtt = new RenderTargetTexture(
+        //     'rttGrab', 
+        //     {width: resolution.x, height: resolution.y},
+        //     scene, 
+        //     false, 
+        //     false, 
+        //     Constants.TEXTUREFORMAT_RGBA,
+        //     false,
+        //     Texture.BILINEAR_SAMPLINGMODE,
+        //     false,
+        //     false
+        // )
+
+        const meshes: AbstractMesh[] = targetRoot.getChildMeshes(false)
+
+        // rtt.renderList = [...meshes]
+        // rtt.activeCamera = camera
+        targetRoot.setEnabled(true)
+
+        const test = MeshBuilder.CreateBox('test', {size:1}, scene)
+        
+        // if(params.autoPosition){
+        //     const cameraInverseForward = params.cameraInverseForward ?? camera.getForward().scale(-1)
+        //     const boundingVectors = targetRoot.getHierarchyBoundingVectors(true)
+        //     const boundingInfo = new BoundingInfo(boundingVectors.min, boundingVectors.max)
+        //     const radius = boundingInfo.boundingSphere.radius
+        //     camera.position = cameraInverseForward.scale(radius*6)
+        //     if(params.focusTarget){
+        //         camera.position.addInPlace(params.focusTarget)
+        //     }        
+        // }else{
+        //     if(params.position){
+        //         camera.position = params.position
+        //     }
+        // }
+
+        // if(params.focusTarget){
+        //     camera.setTarget(params.focusTarget)
+        // }
+
+        scene.clearColor = new Color4(0,0,0,0)
+        canvas.style.width = resolution.x + "px"
+        canvas.style.height = resolution.y + "px"
+        engine.resize(true)
+        scene.render()
+
+        test.onAfterRenderObservable.addOnce(()=>{
+            Tools.DumpFramebuffer(resolution.x, resolution.y, engine, 
+                (blob)=>{			
+                    onBlobSuccess(blob)
+                }            
+                , 'image/png', 'none').then(()=>{
+                    canvas.style.width = originals.size.x + "px"
+                    canvas.style.height =  originals.size.y + "px"
+                    engine.resize(true)
+                    // camera.position = originals.cameraPosition
+                    // camera.setTarget(originals.cameraTarget)
+                    scene.clearColor = originals.clearColor
+                    // targetRoot.setEnabled(false)      
+                })
+        })
+        
+    }    
 
     AddSnapEntity(name){
         const entity = this.gameManager.AddEntity(
