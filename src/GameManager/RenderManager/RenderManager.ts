@@ -65,7 +65,7 @@ export class RenderManager{
 
         this._engine = engine  
         this._scene = scene
-        scene.debugLayer.show()
+        // scene.debugLayer.show()
     }
 
     _renderLoop(){

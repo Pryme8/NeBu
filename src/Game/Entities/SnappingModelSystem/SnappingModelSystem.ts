@@ -167,10 +167,10 @@ export class SnappingModelSystem extends Entity{
                 camera: this.scene.activeCamera,
                 targetRoot: step.model.rootTransform,
                 onBlobSuccess: (blob)=>{
-                    console.log(blob)
+                    //console.log(blob)
                     this.modelMap[step.model.name].previewImageUrl = blob
                     const tempTexture = new Texture(blob, this.scene)
-                    //this._imageGenerationStep(list)
+                    this._imageGenerationStep(list)
                 },
                 ...step.imageCaptureOptions
             }
@@ -226,7 +226,7 @@ export class SnappingModelSystem extends Entity{
         // rtt.activeCamera = camera
         targetRoot.setEnabled(true)
 
-        const test = MeshBuilder.CreateBox('test', {size:1}, scene)
+        // const test = MeshBuilder.CreateBox('test', {size:1}, scene)
         
         // if(params.autoPosition){
         //     const cameraInverseForward = params.cameraInverseForward ?? camera.getForward().scale(-1)
@@ -253,7 +253,7 @@ export class SnappingModelSystem extends Entity{
         engine.resize(true)
         scene.render()
 
-        test.onAfterRenderObservable.addOnce(()=>{
+        // test.onAfterRenderObservable.addOnce(()=>{
             Tools.DumpFramebuffer(resolution.x, resolution.y, engine, 
                 (blob)=>{			
                     onBlobSuccess(blob)
@@ -262,12 +262,12 @@ export class SnappingModelSystem extends Entity{
                     canvas.style.width = originals.size.x + "px"
                     canvas.style.height =  originals.size.y + "px"
                     engine.resize(true)
-                    // camera.position = originals.cameraPosition
-                    // camera.setTarget(originals.cameraTarget)
+                    camera.position = originals.cameraPosition
+                    camera.setTarget(originals.cameraTarget)
                     scene.clearColor = originals.clearColor
-                    // targetRoot.setEnabled(false)      
+                    targetRoot.setEnabled(false)      
                 })
-        })
+        // })
         
     }    
 
